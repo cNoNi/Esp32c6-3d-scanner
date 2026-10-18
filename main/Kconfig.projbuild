@@ -1,0 +1,155 @@
+menu "3D Scanner configuration"
+
+    menu "Wi-Fi"
+
+        choice SCANNER_WIFI_MODE
+            prompt "Wi-Fi mode"
+            default SCANNER_WIFI_MODE_STA
+            help
+                STA: join an existing network (like the Raspberry Pi did).
+                AP: the scanner creates its own network, phone and browser join it.
+
+            config SCANNER_WIFI_MODE_STA
+                bool "Station (connect to router)"
+            config SCANNER_WIFI_MODE_AP
+                bool "Access point (own network)"
+        endchoice
+
+        config SCANNER_WIFI_SSID
+            string "Network SSID"
+            depends on SCANNER_WIFI_MODE_STA
+            default "myssid"
+
+        config SCANNER_WIFI_PASSWORD
+            string "Network password"
+            depends on SCANNER_WIFI_MODE_STA
+            default "mypassword"
+
+        config SCANNER_AP_SSID
+            string "Access point SSID"
+            depends on SCANNER_WIFI_MODE_AP
+            default "3D-Scanner"
+
+        config SCANNER_AP_PASSWORD
+            string "Access point password (empty = open, otherwise min. 8 chars)"
+            depends on SCANNER_WIFI_MODE_AP
+            default "scanner3d"
+
+        config SCANNER_AP_CHANNEL
+            int "Access point channel"
+            depends on SCANNER_WIFI_MODE_AP
+            range 1 13
+            default 1
+
+        config SCANNER_HOSTNAME
+            string "Hostname (DHCP + mDNS, reachable as <hostname>.local)"
+            default "scanner"
+
+    endmenu
+
+    menu "Motor"
+
+        config SCANNER_MOTOR_STEP_GPIO
+            int "STEP GPIO"
+            range 0 30
+            default 19
+
+        config SCANNER_MOTOR_DIR_GPIO
+            int "DIR GPIO"
+            range 0 30
+            default 20
+
+        config SCANNER_MOTOR_ENABLE_GPIO
+            int "EN GPIO (TMC2209: LOW = enabled)"
+            range 0 30
+            default 21
+
+        config SCANNER_MOTOR_JOG
+            int "Jog distance (microsteps per CW/CCW click)"
+            range 1 100000
+            default 10
+
+        config SCANNER_MOTOR_STEPS_PER_REVOLUTION
+            int "Motor full steps per revolution (200 = 1.8 deg/step)"
+            range 1 100000
+            default 200
+
+        config SCANNER_MOTOR_RESOLUTION
+            int "Microstepping resolution (set in hardware on TMC2209)"
+            range 1 256
+            default 8
+
+        config SCANNER_MOTOR_STEP_DELAY_US
+            int "Delay between STEP edges in microseconds (lower = faster)"
+            range 20 1000000
+            default 1000
+            help
+                Each step is HIGH for this time, then LOW for this time
+                (same as MOTOR_STEP_DELAY in the Python config, 0.001 s = 1000 us).
+
+    endmenu
+
+    menu "Scanner"
+
+        config SCANNER_PHOTOS_PER_REVOLUTION
+            int "Photos per revolution"
+            range 1 100000
+            default 50
+
+        config SCANNER_PRE_CAPTURE_DELAY_MS
+            int "Wait after moving, before photo (ms) - lets vibrations stop"
+            range 0 600000
+            default 3000
+
+        config SCANNER_POST_CAPTURE_DELAY_MS
+            int "Wait after photo, before next move (ms)"
+            range 0 600000
+            default 2000
+
+    endmenu
+
+    menu "Camera (phone)"
+
+        config SCANNER_PHONE_SEND_TIMEOUT_MS
+            int "Timeout for sending take_photo to the phone (ms)"
+            range 100 600000
+            default 5000
+
+        config SCANNER_PHOTO_CONFIRM_TIMEOUT_MS
+            int "Timeout for phone photo_taken confirmation (ms)"
+            range 100 600000
+            default 10000
+
+    endmenu
+
+    menu "Web server"
+
+        config SCANNER_SERVER_PORT
+            int "HTTP port (UI + REST API + SSE)"
+            range 1 65535
+            default 5000
+
+        config SCANNER_WEBSOCKET_PORT
+            int "WebSocket port (phone)"
+            range 1 65535
+            default 8765
+
+    endmenu
+
+    choice SCANNER_APP_MODE
+        prompt "Firmware mode"
+        default SCANNER_APP_MODE_NORMAL
+        help
+            Normal: full scanner application.
+            Motor test: port of Tests/motor_test.py, spins forever at 400 steps/s.
+            Move test: port of Tests/move_test.py, moves to 200 and back to 0.
+
+        config SCANNER_APP_MODE_NORMAL
+            bool "Normal (scanner application)"
+        config SCANNER_APP_MODE_MOTOR_TEST
+            bool "Motor test (continuous rotation)"
+        config SCANNER_APP_MODE_MOVE_TEST
+            bool "Move test (200 steps and back)"
+    endchoice
+
+endmenu

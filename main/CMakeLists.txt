@@ -1,0 +1,23 @@
+idf_component_register(
+    SRCS
+        "main.cpp"
+        "motor.cpp"
+        "camera.cpp"
+        "scanner.cpp"
+        "web_server.cpp"
+        "wifi.cpp"
+        "motor_tests.cpp"
+    INCLUDE_DIRS "."
+    EMBED_TXTFILES
+        "../web/index.html"
+        "../web/style.css"
+    PRIV_REQUIRES
+        esp_driver_gpio
+        esp_driver_gptimer
+        esp_http_server
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_timer
+        nvs_flash
+)

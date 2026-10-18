@@ -1,0 +1,18 @@
+CONFIG_IDF_TARGET="esp32c6"
+
+# Flash
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+# 1.5 MB app partition (Wi-Fi + 2 HTTP servers + mDNS is ~0.95 MB)
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
+# FreeRTOS: 1 ms tick for precise delays
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
+
+# HTTP server: WebSocket support (phone camera link) and room for browser headers
+CONFIG_HTTPD_WS_SUPPORT=y
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
+CONFIG_HTTPD_MAX_URI_LEN=512
+
+# Two HTTP servers (UI/API + phone WebSocket) + SSE clients + mDNS
+CONFIG_LWIP_MAX_SOCKETS=20

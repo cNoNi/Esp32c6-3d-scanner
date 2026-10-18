@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Scanner Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>3D Scanner</h1>
+
+    <button onclick="startScan()">Start Scan</button>
+    <button onclick="stopScan()">Stop Scan</button>
+
+    <hr>
+
+    <button onclick="takePhoto()">Take Photo</button>
+    <button onclick="moveCW()">Rotate CW</button>
+    <button onclick="moveCCW()">Rotate CCW</button>
+
+    <div id="status">
+        Connecting...
+    </div>
+
+</div>
+
+<script>
+
+function request(url, method = "POST") {
+    fetch(url, { method })
+        .catch(console.error);
+}
+
+function startScan() {
+    request("/scan/start");
+}
+
+function stopScan() {
+    request("/scan/stop");
+}
+
+function takePhoto() {
+    request("/camera/photo");
+}
+
+function moveCW() {
+    request("/motor/cw");
+}
+
+function moveCCW() {
+    request("/motor/ccw");
+}
+
+
+const events = new EventSource("/events");
+
+events.onopen = () => {
+    console.log("SSE connected");
+};
+
+events.onmessage = (event) => {
+
+    const data = JSON.parse(event.data);
+
+    document.getElementById("status").innerHTML = `
+        Running: ${data.running}<br>
+        Photo: ${data.photo}/${data.total}
+    `;
+};
+
+events.onerror = () => {
+    document.getElementById("status").innerHTML =
+        "Disconnected from server...";
+};
+
+</script>
+
+</body>
+</html>
