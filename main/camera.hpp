@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "esp_err.h"
 #include "esp_http_server.h"
@@ -19,9 +20,13 @@ public:
 
     esp_err_t init();
 
-    // Called by the WebSocket server on handshake / socket close
+    // Called by the WebSocket server on handshake / socket close.
+    // All open phone connections are tracked; the newest one is the camera.
+    // When it closes, the next newest still-open connection takes over.
     void set_connection(httpd_handle_t server, int fd);
-    void disconnect(int fd);  // only disconnects if fd is the current connection
+    void disconnect(int fd);
+    // Registers fd if it is not tracked yet (any message proves the phone is there)
+    void ensure_connection(httpd_handle_t server, int fd);
 
     bool connected();
 
@@ -51,7 +56,7 @@ private:
 
     std::mutex conn_mutex_;
     httpd_handle_t server_ = nullptr;
-    int fd_ = -1;
+    std::vector<int> fds_;  // open phone connections, newest last
 
     std::mutex photo_mutex_;  // one photo request at a time
     uint32_t seq_ = 0;

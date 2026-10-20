@@ -423,6 +423,7 @@ esp_err_t WebServer::handle_ws(httpd_req_t* req)
     }
 
     ESP_LOGI(TAG, "Telefon: %s", message.c_str());
+    self->camera_.ensure_connection(req->handle, httpd_req_to_sockfd(req));
 
     if (message == "photo_taken") {
         self->camera_.photo_taken();

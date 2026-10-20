@@ -1,5 +1,7 @@
 #include "camera.hpp"
 
+#include <algorithm>
+
 #include "esp_check.h"
 #include "esp_log.h"
 
@@ -30,26 +32,47 @@ void Camera::set_connection(httpd_handle_t server, int fd)
 {
     std::lock_guard<std::mutex> lock(conn_mutex_);
     server_ = server;
-    fd_ = fd;
-    ESP_LOGI(TAG, "Camera: telefon podłączony (fd %d)", fd);
+    fds_.erase(std::remove(fds_.begin(), fds_.end(), fd), fds_.end());
+    fds_.push_back(fd);
+    ESP_LOGI(TAG, "Camera: telefon podłączony (fd %d, połączeń: %u)", fd, static_cast<unsigned>(fds_.size()));
 }
 
 void Camera::disconnect(int fd)
 {
     std::lock_guard<std::mutex> lock(conn_mutex_);
-    // disconnect only if this is the current connection
-    if (fd_ == fd) {
-        server_ = nullptr;
-        fd_ = -1;
-        xSemaphoreTake(photo_done_, 0);
-        ESP_LOGI(TAG, "Camera: telefon rozłączony");
+    auto it = std::find(fds_.begin(), fds_.end(), fd);
+    if (it == fds_.end()) {
+        return;
     }
+    const bool was_active = (it == fds_.end() - 1);
+    fds_.erase(it);
+
+    if (fds_.empty()) {
+        server_ = nullptr;
+        xSemaphoreTake(photo_done_, 0);
+        ESP_LOGI(TAG, "Camera: telefon rozłączony (fd %d)", fd);
+    } else if (was_active) {
+        ESP_LOGI(TAG, "Camera: fd %d rozłączony, aktywne teraz fd %d", fd, fds_.back());
+    } else {
+        ESP_LOGI(TAG, "Camera: stare połączenie fd %d zamknięte", fd);
+    }
+}
+
+void Camera::ensure_connection(httpd_handle_t server, int fd)
+{
+    {
+        std::lock_guard<std::mutex> lock(conn_mutex_);
+        if (std::find(fds_.begin(), fds_.end(), fd) != fds_.end()) {
+            return;
+        }
+    }
+    set_connection(server, fd);
 }
 
 bool Camera::connected()
 {
     std::lock_guard<std::mutex> lock(conn_mutex_);
-    return server_ != nullptr && fd_ >= 0;
+    return server_ != nullptr && !fds_.empty();
 }
 
 void Camera::send_work(void* arg)
@@ -103,10 +126,11 @@ bool Camera::take_photo(const char* filename, std::string* error)
     {
         std::lock_guard<std::mutex> lock(conn_mutex_);
         server = server_;
-        fd = fd_;
+        fd = fds_.empty() ? -1 : fds_.back();
     }
 
     if (server == nullptr || fd < 0) {
+        ESP_LOGW(TAG, "take_photo: no phone connected");
         *error = ERR_NOT_CONNECTED;
         return false;
     }
